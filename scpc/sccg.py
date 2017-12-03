@@ -5,7 +5,7 @@ from firedrake.matrix_free.operators import ImplicitMatrixContext
 from firedrake.petsc import PETSc
 from firedrake.slate.slate import Tensor, AssembledVector
 from scpc.pc_utils import (create_sc_nullspace,
-         	           get_transfer_kernels)
+                           get_transfer_kernels)
 from firedrake.parloops import par_loop, READ, WRITE
 from pyop2.profiling import timed_region, timed_function
 

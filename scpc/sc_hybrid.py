@@ -1,4 +1,3 @@
-from firedrake.logging import log, WARNING
 from firedrake.matrix_free.preconditioners import PCBase
 from firedrake.matrix_free.operators import ImplicitMatrixContext
 from firedrake.petsc import PETSc
@@ -87,9 +86,6 @@ class HybridSCPC(PCBase):
         Tr = FunctionSpace(T.mesh(), T.ufl_element())
         bcs = []
         cxt_bcs = self.cxt.row_bcs
-        if cxt_bcs:
-            bc_msg = "It is highly recommended to apply BCs weakly."
-            log(WARNING, bc_msg)
         for bc in cxt_bcs:
             assert bc.function_space() == T, (
                 "BCs should be imposing vanishing conditions on traces"

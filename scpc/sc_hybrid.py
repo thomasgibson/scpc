@@ -9,14 +9,22 @@ __all__ = ['HybridSCPC']
 
 
 class HybridSCPC(PCBase):
-    """
-    Expects a fully formulated hybridized formulation
-    written in "cell-local" form (no jumps or averages).
+    """A Slate-based python preconditioner implementation of
+    static condensation for three-field hybridized problems. This
+    applies to the mixed-hybrid methods, such as the RT-H and BDM-H
+    methods, as well as hybridized-DG discretizations like the LDG-H
+    method.
     """
 
     @timed_function("HybridSCInit")
     def initialize(self, pc):
-        """
+        """Set up the problem context. This takes the incoming
+        three-field hybridized system and constructs the static
+        condensation operators using Slate expressions.
+
+        A KSP is created for the reduced system for the Lagrange
+        multipliers. The scalar and flux fields are reconstructed
+        locally.
         """
         from firedrake.assemble import (allocate_matrix,
                                         create_assembly_callable)
@@ -170,13 +178,18 @@ class HybridSCPC(PCBase):
 
     @timed_function("HybridSCUpdate")
     def update(self, pc):
-        """
+        """Update by assembling into the KSP operator. No
+        need to reconstruct symbolic objects.
         """
         self._assemble_S()
         self.S.force_evaluation()
 
     def apply(self, pc, x, y):
-        """
+        """Solve the reduced system for the Lagrange multipliers.
+        The system is assembled using operators constructed from
+        the Slate expressions in the initialize method of this PC.
+        Recovery of the scalar and flux fields are assembled cell-wise
+        from Slate expressions describing the local problem.
         """
         with self.residual.dat.vec_wo as v:
             x.copy(v)
@@ -208,6 +221,5 @@ class HybridSCPC(PCBase):
             w.copy(y)
 
     def applyTranspose(self, pc, x, y):
-        """
-        """
+        """Apply the transpose of the preconditioner."""
         raise NotImplementedError("Transpose application is not implemented.")

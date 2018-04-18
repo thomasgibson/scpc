@@ -32,7 +32,6 @@ class HybridSCPC(PCBase):
         from firedrake.function import Function
         from firedrake.functionspace import FunctionSpace
         from firedrake.interpolation import interpolate
-        from pyop2.base import MixedDat
 
         prefix = pc.getOptionsPrefix() + "hybrid_sc_"
         _, P = pc.getOperators()
@@ -148,10 +147,10 @@ class HybridSCPC(PCBase):
         # This projects the non-trace residual bits into
         # the trace space:
         # -L * M.inv * | v1 v2 |^T
-        VV = W[0] * W[1]
-        mdat = MixedDat([v1.dat, v2.dat])
-        v1v2 = Function(VV, val=mdat.data)
-        r_lambda_thunk = -L * M.inv * AssembledVector(v1v2)
+        R = AssembledVector(self.residual)
+        v1v2 = R.block(((0, 1),))
+        v3 = R.block((2,))
+        r_lambda_thunk = v3 - L * M.inv * v1v2
         self._assemble_Srhs_thunk = create_assembly_callable(
             r_lambda_thunk,
             tensor=self.r_lambda_thunk,
@@ -198,13 +197,9 @@ class HybridSCPC(PCBase):
             # Now assemble residual for the reduced problem
             self._assemble_Srhs_thunk()
 
-            # Generate the trace RHS residual
-            self.r_lambda.assign(self.residual.split()[2] +
-                                 self.r_lambda_thunk)
-
         with timed_region("HybridSCSolve"):
             # Solve the system for the Lagrange multipliers
-            with self.r_lambda.dat.vec_ro as b:
+            with self.r_lambda_thunk.dat.vec_ro as b:
                 if self.trace_ksp.getInitialGuessNonzero():
                     acc = self.solution.split()[2].dat.vec
                 else:

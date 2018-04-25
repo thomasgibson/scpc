@@ -95,6 +95,7 @@ class HybridSCPC(PCBase):
 
         # Set up ksp for the trace problem
         trace_ksp = PETSc.KSP().create(comm=pc.comm)
+        trace_ksp.incrementTabLevel(1, parent=pc)
         trace_ksp.setOptionsPrefix(prefix)
         trace_ksp.setOperators(Smat)
         trace_ksp.setUp()
@@ -243,3 +244,8 @@ class HybridSCPC(PCBase):
     def applyTranspose(self, pc, x, y):
         """Apply the transpose of the preconditioner."""
         raise NotImplementedError("Transpose application is not implemented.")
+
+    def view(self, pc, viewer=None):
+        viewer.printfASCII("Hybridized trace preconditioner\n")
+        viewer.printfASCII("KSP to solve trace system:\n")
+        self.trace_ksp.view(viewer=viewer)

@@ -287,9 +287,11 @@ class HybridizationPC(PCBase):
         """
         # We assemble the unknown which is an expression
         # of the first eliminated variable.
-        self._sub_unknown()
+        with timed_region("HybridReconScalarField"):
+            self._sub_unknown()
         # Recover the eliminated unknown
-        self._elim_unknown()
+        with timed_region("HybridReconFluxField"):
+            self._elim_unknown()
 
     @timed_function("HybridUpdate")
     def update(self, pc):

@@ -141,24 +141,24 @@ class HybridSCPC(PCBase):
         # | D E |
         # which has block row indices (0, 1) and block
         # column indices (0, 1) as well.
-        M = O.block(((0, 1), (0, 1)))
+        M = O.block[:2, :2]
 
         # Extract sub-block:
         # | C |
         # | F |
         # which has block row indices (0, 1) and block
         # column indices (2,)
-        K = O.block(((0, 1), 2))
+        K = O.block[:2, 2]
 
         # Extract sub-block:
         # | G H |
         # which has block row indices (2,) and block column
         # indices (0, 1)
-        L = O.block((2, (0, 1)))
+        L = O.block[2, :2]
 
         # And the final block J has block row-column
         # indices (2, 2)
-        J = O.block((2, 2))
+        J = O.block[2, 2]
 
         # Schur complement for traces
         S = J - L * M.inv * K
@@ -168,20 +168,20 @@ class HybridSCPC(PCBase):
         # the trace space:
         # -L * M.inv * | v1 v2 |^T
         R = AssembledVector(self.residual)
-        v1v2 = R.block(((0, 1),))
-        v3 = R.block((2,))
+        v1v2 = R.block[:2]
+        v3 = R.block[2]
         r_lambda = v3 - L * M.inv * v1v2
 
         # Reconstruction expressions
         q_h, u_h, lambda_h = self.solution.split()
 
         # Local tensors needed for reconstruction
-        A = O.block((0, 0))
-        B = O.block((0, 1))
-        C = O.block((0, 2))
-        D = O.block((1, 0))
-        E = O.block((1, 1))
-        F = O.block((1, 2))
+        A = O.block[0, 0]
+        B = O.block[0, 1]
+        C = O.block[0, 2]
+        D = O.block[1, 0]
+        E = O.block[1, 1]
+        F = O.block[1, 2]
         Se = E - D * A.inv * B
         Sf = F - D * A.inv * C
 

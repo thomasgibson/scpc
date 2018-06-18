@@ -267,31 +267,15 @@ class HybridizationPC(PCBase):
 
         M = D - C * A.inv * B
         R = K_1.T - C * A.inv * K_0.T
-        u_rec = M.solve(f - C * A.inv * g - R * lambdar,
-                        decomposition="PartialPivLU")
+        u_rec = M.inv * (f - C * A.inv * g - R * lambdar)
         self._sub_unknown = create_assembly_callable(u_rec,
                                                      tensor=u,
                                                      form_compiler_parameters=self.ctx.fc_params)
 
-        sigma_rec = A.solve(g - B * AssembledVector(u) - K_0.T * lambdar,
-                            decomposition="PartialPivLU")
+        sigma_rec = A.inv * (g - B * AssembledVector(u) - K_0.T * lambdar)
         self._elim_unknown = create_assembly_callable(sigma_rec,
                                                       tensor=sigma,
                                                       form_compiler_parameters=self.ctx.fc_params)
-
-    @timed_function("HybridRecon")
-    def _reconstruct(self):
-        """Reconstructs the system unknowns using the multipliers.
-        Note that the reconstruction calls are assumed to be
-        initialized at this point.
-        """
-        # We assemble the unknown which is an expression
-        # of the first eliminated variable.
-        with timed_region("HybridReconScalarField"):
-            self._sub_unknown()
-        # Recover the eliminated unknown
-        with timed_region("HybridReconFluxField"):
-            self._elim_unknown()
 
     @timed_function("HybridUpdate")
     def update(self, pc):
@@ -351,7 +335,11 @@ class HybridizationPC(PCBase):
                     self.trace_ksp.solve(b, x_trace)
 
         # Reconstruct the unknowns
-        self._reconstruct()
+        with timed_region("HybridRecon"):
+            with timed_region("HybridReconScalarField"):
+                self._sub_unknown()
+            with timed_region("HybridReconFluxField"):
+                self._elim_unknown()
 
         with timed_region("HybridRecover"):
             # Project the broken solution into non-broken spaces

@@ -40,12 +40,12 @@ def create_sc_nullspace(P, V, V_facet, comm):
     # Transfer the trace bit (the nullspace vector restricted
     # to facet nodes is the nullspace for the condensed system)
     kernel = """
-        for (int i=0; i<%d; ++i){
-            for (int j=0; j<%d; ++j){
-                x_facet[i][j] = x_h[i][j];
+        for (int i=0; i<%(d)d; ++i){
+            for (int j=0; j<%(s)d; ++j){
+                x_facet[i*%(s)d + j] = x_h[i*%(s)d + j];
             }
-        }""" % (V_facet.finat_element.space_dimension(),
-                np.prod(V_facet.shape))
+        }""" % {"d": V_facet.finat_element.space_dimension(),
+                "s": np.prod(V_facet.shape)}
     for v in vecs:
         with tmp.dat.vec_wo as t:
             v.copy(t)

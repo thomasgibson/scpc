@@ -33,6 +33,8 @@ class VerticalHybridizationPC(PCBase):
     the Slate DSL in Firedrake.
     """
 
+    needs_python_pmat = True
+
     @timed_function("VertHybridInit")
     def initialize(self, pc):
         """ Set up the problem context. Takes the original

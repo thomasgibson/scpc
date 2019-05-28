@@ -22,6 +22,8 @@ class HybridizationPC(PCBase):
     are performed element-local using the Slate language.
     """
 
+    needs_python_pmat = True
+
     @timed_function("HybridInit")
     def initialize(self, pc):
         """Set up the problem context. Take the original

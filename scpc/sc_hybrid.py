@@ -17,6 +17,8 @@ class HybridSCPC(PCBase):
     method.
     """
 
+    needs_python_pmat = True
+
     @timed_function("HybridSCInit")
     def initialize(self, pc):
         """Set up the problem context. This takes the incoming

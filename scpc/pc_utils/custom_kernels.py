@@ -88,33 +88,35 @@ def get_transfer_kernels(fs_dict):
     Vo = fs_dict['interior-space']
     Vf = fs_dict['facet-space']
 
-    args = (Vo.finat_element.space_dimension(), np.prod(Vo.shape),
-            offset,
-            Vf.finat_element.space_dimension(), np.prod(Vf.shape))
+    args = {"Vod": Vo.finat_element.space_dimension(),
+            "Vos": np.prod(Vo.shape),
+            "off": offset,
+            "Vfd": Vf.finat_element.space_dimension(),
+            "Vfs": np.prod(Vf.shape)}
 
     join = """
-    for (int i=0; i<%d; ++i){
-        for (int j=0; j<%d; ++j){
-            x[i + %d][j] = x_int[i][j];
+    for (int i=0; i<%(Vod)d; ++i){
+        for (int j=0; j<%(Vos)d; ++j){
+            x[(i + %(off)d)*%(Vos)d + j] = x_int[i*%(Vos)d + j];
         }
     }
 
-    for (int i=0; i<%d; ++i){
-        for (int j=0; j<%d; ++j){
-            x[i][j] = x_facet[i][j];
+    for (int i=0; i<%(Vfd)d; ++i){
+        for (int j=0; j<%(Vfs)d; ++j){
+            x[i*%(Vfs)d + j] = x_facet[i*%(Vfs)d + j];
         }
     }""" % args
 
     partition = """
-    for (int i=0; i<%d; ++i){
-        for (int j=0; j<%d; ++j){
-            x_int[i][j] = x[i + %d][j];
+    for (int i=0; i<%(Vod)d; ++i){
+        for (int j=0; j<%(Vos)d; ++j){
+            x_int[i*%(Vos)d + j] = x[(i + %(off)d)*%(Vos)d + j];
         }
     }
 
-    for (int i=0; i<%d; ++i){
-        for (int j=0; j<%d; ++j){
-            x_facet[i][j] = x[i][j];
+    for (int i=0; i<%(Vfd)d; ++i){
+        for (int j=0; j<%(Vfs)d; ++j){
+            x_facet[i*%(Vfs)d + j] = x[i*%(Vfs)d + j];
         }
     }""" % args
 

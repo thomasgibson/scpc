@@ -18,6 +18,8 @@ class SCCG(PCBase):
     static condensation for continuous Galerkin problems.
     """
 
+    needs_python_pmat = True
+
     @timed_function("SCInit")
     def initialize(self, pc):
         """Set up the problem context. Take the original

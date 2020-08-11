@@ -209,7 +209,6 @@ class HybridizationPC(PCBase):
                                                     mat_type=mat_type)
 
         self._assemble_S()
-        self.S.force_evaluation()
         Smat = self.S.petscmat
 
         nullspace = self.ctx.appctx.get("trace_nullspace", None)
@@ -282,7 +281,6 @@ class HybridizationPC(PCBase):
         reconstruct symbolic objects.
         """
         self._assemble_S()
-        self.S.force_evaluation()
 
     def apply(self, pc, x, y):
         """We solve the forward eliminated problem for the

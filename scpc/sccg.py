@@ -105,7 +105,6 @@ class SCCG(PCBase):
             form_compiler_parameters=self.cxt.fc_params)
 
         self._assemble_S()
-        self.S.force_evaluation()
         Smat = self.S.petscmat
 
         # Nullspace for the reduced system
@@ -178,7 +177,6 @@ class SCCG(PCBase):
         need to reconstruct symbolic objects.
         """
         self._assemble_S()
-        self.S.force_evaluation()
 
     def apply(self, pc, x, y):
         """Solve the reduced system for the facet degrees of

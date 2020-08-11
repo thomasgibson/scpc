@@ -1,11 +1,11 @@
 import ufl
 
+from firedrake import interpolate
 from firedrake.preconditioners import PCBase
 from firedrake.matrix_free.operators import ImplicitMatrixContext
 from firedrake.petsc import PETSc
 from firedrake.slate.slate import Tensor, AssembledVector
-from scpc.pc_utils import (create_sc_nullspace,
-                           get_transfer_kernels)
+from scpc.pc_utils import create_sc_nullspace
 from firedrake.parloops import par_loop, READ, WRITE
 from pyop2.profiling import timed_region, timed_function
 
@@ -53,11 +53,9 @@ class SCCG(PCBase):
         if V.ufl_element().sobolev_space().name != "H1":
             raise ValueError("Expecting an H1-conforming element.")
 
-        if not V.ufl_element().cell().is_simplex():
-            raise NotImplementedError("Only simplex meshes are implemented.")
-
-        top_dim = V.finat_element._element.ref_el.get_dimension()
-        if not V.finat_element.entity_dofs()[top_dim][0]:
+        entity_dofs = V.finat_element.entity_dofs()
+        top_dim = max(entity_dofs.keys())
+        if not entity_dofs[top_dim][0]:
             raise RuntimeError("There are no interior dofs to eliminate.")
 
         # We decompose the space into an interior part and facet part
@@ -66,11 +64,6 @@ class SCCG(PCBase):
         V_int = FunctionSpace(mesh, interior_element)
         V_facet = FunctionSpace(mesh, facet_element)
 
-        # Get transfer kernel for moving data
-        self._transfer_kernel = get_transfer_kernels({'h1-space': V,
-                                                      'interior-space': V_int,
-                                                      'facet-space': V_facet})
-
         # Set up functions for the H1 functions and the interior/trace parts
         self.trace_solution = Function(V_facet)
         self.interior_solution = Function(V_int)
@@ -78,6 +71,8 @@ class SCCG(PCBase):
         self.h1_residual = Function(V)
         self.interior_residual = Function(V_int)
         self.trace_residual = Function(V_facet)
+
+        self.tmp_full = Function(V)
 
         # TODO: Handle strong bcs in Slate
         if self.cxt.row_bcs:
@@ -117,6 +112,7 @@ class SCCG(PCBase):
         sc_ksp = PETSc.KSP().create(comm=pc.comm)
         sc_ksp.setOptionsPrefix(prefix)
         sc_ksp.setOperators(Smat)
+        sc_ksp.incrementTabLevel(1, pc)
         sc_ksp.setUp()
         sc_ksp.setFromOptions()
         self.sc_ksp = sc_ksp
@@ -151,11 +147,10 @@ class SCCG(PCBase):
         u_facet = self.trace_solution
 
         with timed_region("SCReconSolution"):
-            par_loop(self._transfer_kernel.join,
-                     ufl.dx,
-                     {"x": (self.h1_solution, WRITE),
-                      "x_int": (u_int, READ),
-                      "x_facet": (u_facet, READ)})
+            interpolate(u_int, self.tmp_full)
+            self.h1_solution.assign(self.tmp_full)
+            interpolate(u_facet, self.tmp_full)
+            self.h1_solution.assign(self.h1_solution + self.tmp_full)
 
     @timed_function("SCTransferResidual")
     def _partition_residual(self):
@@ -165,11 +160,8 @@ class SCCG(PCBase):
         r_int = self.interior_residual
         r_facet = self.trace_residual
 
-        par_loop(self._transfer_kernel.partition,
-                 ufl.dx,
-                 {"x_int": (r_int, WRITE),
-                  "x_facet": (r_facet, WRITE),
-                  "x": (self.h1_residual, READ)})
+        interpolate(self.h1_residual, r_int)
+        interpolate(self.h1_residual, r_facet)
 
     @timed_function("SCUpdate")
     def update(self, pc):
